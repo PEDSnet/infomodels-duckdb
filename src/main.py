@@ -85,7 +85,7 @@ def main():
             if table_name in skip_duckdb_load_tables:
                 LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
                 continue
-            LOGGER.info(f"Loading {file_path} into DuckDB table {table_name}.")
+            LOGGER.debug(f"Loading {file_path} into DuckDB table {table_name}.")
             load_csv_to_duckdb(csv_path=file_path, con=con, table_name=table_name, accept_additional_col=True)
 
         LOGGER.info("All submission files loaded into DuckDB successfully.")
