@@ -1,0 +1,17 @@
+data-models:
+  mode: data-models-service # default to 'data-models-service' for PEDSnet API service. Use 'local' for local json files
+  name: pedsnet
+  version: 5.9.0 # three digit version, e.g. 5.9.0
+
+submission_files:
+  dir: /PATH/TO/DIR/WITH/CSV/FILES
+  extension: .csv
+
+duckdb:
+  path: /PATH/TO/STORE/SOME_FILENAME.duckdb # path to store cdm duckdb file generated
+  skip_load: []   # tables to skip loading into duckdb, comma separated list
+  copy_options: FORMAT CSV, HEADER, DELIM ',', ESCAPE '"'   # copy options in copy command https://duckdb.org/docs/stable/sql/statements/copy.html#csv-options
+
+core:
+  log_level: INFO
+  log_path: /PATH/TO/STORE/YOUR_LOG_FILE.log # path to store log file. If exists, will append

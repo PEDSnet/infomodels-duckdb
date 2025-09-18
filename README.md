@@ -1,0 +1,73 @@
+# infomodels-duckdb
+
+A Python package for running data quality checks on any Common Data Model.  
+It provides utilities to validate data integrity rules, such as constraints and relationships, with structured logging and result summaries. The package is designed to be extensible, allowing additional data quality tests to be added as needed.
+
+## Quick Start
+
+### Docker
+
+1. **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/PEDSnet/infomodels-duckdb.git
+    cd infomodels-duckdb
+    ```
+
+2. **Edit the configuration:**
+
+    Copy the template configuration file and update it as needed:
+
+    ```bash
+    cp config.yml.docker_template config.yml
+    ```
+
+    Then, edit `config.yml` to match your submission and site file format.
+
+3. **Build the Docker image:**
+
+    ```bash
+    docker build -t infomodels-duckdb .
+    ```
+4. **Run the main script in a container:**
+
+    ```bash
+    docker run --rm -it \
+      -v PATH_TO_YOUR_CDM_DIR:/data \
+      -v PATH_TO_YOUR_RESULT_DIR:/result \
+      infomodels-duckdb
+    ```
+
+### Standalone
+
+1. **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/PEDSnet/infomodels-duckdb.git
+    cd infomodels-duckdb
+    ```
+2. **Activate virtual environment and install dependencies (optional, but recommended):**  
+   This isolates your Python environment for the project. Alternatively, you may install the package and its dependencies system-wide if preferred.
+
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install
+    ```
+
+3. **Edit the configuration:**
+
+    Copy the template configuration file and update it as needed:
+
+    ```bash
+    cp config.yml.standalone_template config.yml
+    ```
+
+    Then, edit `config.yml` to match your submission and site file format.
+
+
+4. **Run the main script:**
+
+    ```bash
+    python -m src.main
+    ```
