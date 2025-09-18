@@ -52,7 +52,7 @@ It provides utilities to validate data integrity rules, such as constraints and 
     ```bash
     python -m venv .venv
     source .venv/bin/activate
-    pip install
+    pip install -r requirements.txt
     ```
 
 3. **Edit the configuration:**
