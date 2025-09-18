@@ -75,12 +75,12 @@ It provides utilities to validate data integrity rules, such as constraints and 
 ## Implemented Checks
 
 The following data quality checks are currently supported:
-
 - **Missing Submission File:** Detects required files that are missing from the submission.
 - **Extra Submission File:** Detects unexpected files present in the submission.
 - **Duplicated Column in CSV:** Identifies duplicate column names in CSV headers.
 - **Extra Column in CSV:** Flags columns in CSV files that are not defined in the data model.
 - **Missing Column in CSV:** Flags columns defined in the data model that are missing from the CSV file.
+- **Data Type:** The data types in the CSV files conform to the column definitions specified in the CDM.
 - **NOT NULL Violation:** Ensures specified columns do not contain NULL values.
 - **Distinct Violation:** Ensures specified columns (or combinations) contain only unique values.
 - **Primary Key Violation:** Checks that primary key columns are both NOT NULL and unique.
