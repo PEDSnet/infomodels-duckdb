@@ -3,7 +3,7 @@ import os
 from typing import Tuple, List, Set
 from src.dq_checks.check_result import CheckResult
 from src.config import LOGGER
-from src.util import OPTIONAL_TABLES
+from src.constants import OPTIONAL_TABLES
 
 
 def check_missing_submission_file(

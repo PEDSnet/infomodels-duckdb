@@ -2,7 +2,7 @@ from src.config import CONFIG, LOGGER
 from src.dq_checks.check_result import CheckResult
 from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb
 from src.data_model import DataModel
-from src.util import OPTIONAL_TABLES
+from src.constants import OPTIONAL_TABLES
 from src.dq_checks.check_file_completeness import check_missing_submission_file, check_extra_submission_file
 from src.dq_checks.check_header import check_duplicated_column_in_csv, check_extra_column_in_csv, check_missing_column_in_csv
 from src.dq_checks.check_fk import check_fk_violation
