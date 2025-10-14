@@ -12,3 +12,6 @@ tmp
 
 # Ignore dev
 .dev
+
+# Ignore production config
+config.yml
