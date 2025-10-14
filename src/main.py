@@ -10,6 +10,7 @@ from src.dq_checks.check_not_null import check_not_null_violation
 from src.dq_checks.check_distinct import check_distinct_violation
 import duckdb
 import os
+import fnmatch
 
 def main():
     LOGGER.info("Running with config: " + str(CONFIG))  
@@ -25,6 +26,12 @@ def main():
         #data_models_dict = data_model.data
         LOGGER.info("Data models loaded successfully. ")
 
+        skip_check_tables = list(OPTIONAL_TABLES)
+        skip_check_columns = dict() # a dict of {table_name: (column_name, ...)}
+        skip_duckdb_load_table_patterns = list(CONFIG['duckdb'].get('skip_load', []))
+        skip_duckdb_load_tables = [table for table in data_model.all_table_names() if any(fnmatch.fnmatch(table, pattern) for pattern in skip_duckdb_load_table_patterns)]
+        LOGGER.debug(f"Tables to skip loading into DuckDB from config: {skip_duckdb_load_tables}")
+
         # Initialize DuckDB database
         LOGGER.info("Initializing DuckDB database.")
         create_duckdb_tables(data_model, con, skip_tables = skip_duckdb_load_tables, recreate = True)
@@ -35,7 +42,7 @@ def main():
         submission_file_extension = CONFIG['submission_files'].get('file_extension', '.csv')
 
         LOGGER.debug("Checking submission files completeness.")
-        required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES))
+        required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES) - set(skip_duckdb_load_tables))
 
         check_result_missing_submission_file = check_missing_submission_file(
             file_dir = submission_dir,
