@@ -118,5 +118,5 @@ def check_fk_violation(
                 reference_column=reference_column
             )
             
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=con)
     return result

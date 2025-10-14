@@ -5,6 +5,39 @@ from duckdb import DuckDBPyConnection
 import duckdb
 from src.data_model import DataModel
 
+def init_duckdb_logging_schema(con: DuckDBPyConnection, run_id: str, run_config: dict, logging_schema = 'logging') -> DuckDBPyConnection:
+    con.execute(f"""
+    CREATE SCHEMA IF NOT EXISTS {logging_schema};
+    CREATE TABLE IF NOT EXISTS {logging_schema}.dq (
+        run_id VARCHAR,
+        log_time TIMESTAMP,
+        check_type VARCHAR,
+        status VARCHAR,
+        file_name VARCHAR,
+        table_name VARCHAR,
+        column_name VARCHAR,
+        violation_pct FLOAT,
+        threshold VARCHAR,
+        message VARCHAR,
+        extra_info VARCHAR
+    );
+    CREATE TABLE IF NOT EXISTS {logging_schema}.process (
+        run_id VARCHAR,
+        process_name VARCHAR,
+        status VARCHAR,
+        start_time TIMESTAMP,
+        end_time TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS {logging_schema}.run (
+        run_id VARCHAR,
+        start_time TIMESTAMP,
+        end_time TIMESTAMP,
+        config STRING
+    );
+    """)
+    # insert a new run
+    con.execute(f"""INSERT INTO {logging_schema}.run (run_id, start_time, config) VALUES ('{run_id}', current_localtimestamp(), ?);""", (str(run_config),))
+    return con
 
 def create_duckdb_tables(data_model: DataModel, con: DuckDBPyConnection, skip_tables: List = [], recreate: bool = False):
     ddl_dict = data_model.to_duckdb_ddl()

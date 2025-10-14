@@ -35,7 +35,7 @@ def check_distinct_violation(
             status='SKIPPED',
             troubleshooting_message=f'Table {table_name} does not exist in the database.'
         )
-        result.log(LOGGER)
+        result.log(LOGGER, duckdb_conn=con)
         return result
     for column_name in column_names:
         if not column_exists(con, table_name, column_name):
@@ -46,7 +46,7 @@ def check_distinct_violation(
                 status='SKIPPED',
                 troubleshooting_message=f'Column {column_name} does not exist in table {table_name}.'
             )
-            result.log(LOGGER)
+            result.log(LOGGER, duckdb_conn=con)
             return result
     
     # check for DISTINCT violations
@@ -88,5 +88,5 @@ def check_distinct_violation(
             table_name=table_name,
             column_name=column_name,
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=con)
     return result

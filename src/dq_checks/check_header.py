@@ -4,7 +4,7 @@ from collections import Counter
 from src.config import LOGGER
 from src.data_model import DataModel
 
-def check_duplicated_column_in_csv(file_path: str, table_name: str) -> CheckResult:
+def check_duplicated_column_in_csv(file_path: str, table_name: str, duckdb_conn = None) -> CheckResult:
     """
     Check if the CSV file has duplicated columns in its header.
 
@@ -33,10 +33,10 @@ def check_duplicated_column_in_csv(file_path: str, table_name: str) -> CheckResu
             file_name=file_path,
             table_name = table_name,
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=duckdb_conn)
     return result
 
-def check_extra_column_in_csv(file_path: str, data_model: DataModel, table_name: str) -> CheckResult:
+def check_extra_column_in_csv(file_path: str, data_model: DataModel, table_name: str, duckdb_conn = None) -> CheckResult:
     """
     Check if the CSV file has extra columns that are not defined in the CDM table definition.
 
@@ -66,10 +66,10 @@ def check_extra_column_in_csv(file_path: str, data_model: DataModel, table_name:
             status = 'PASS',
             table_name = table_name
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=duckdb_conn)
     return result
 
-def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_name: str) -> CheckResult:
+def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_name: str, duckdb_conn = None) -> CheckResult:
     """
     Check if the CSV file has all the required columns defined in the CDM table definition.
 
@@ -99,5 +99,5 @@ def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_nam
             status = 'PASS',
             table_name = table_name,
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=duckdb_conn)
     return result

@@ -32,7 +32,7 @@ def check_not_null_violation(
             status='SKIPPED',
             troubleshooting_message=f'Table {table_name} does not exist in the database.'
         )
-        result.log(LOGGER)
+        result.log(LOGGER, duckdb_conn=con)
         return result
     elif not column_exists(con, table_name, column_name):
         result = CheckResult(
@@ -42,7 +42,7 @@ def check_not_null_violation(
             status='SKIPPED',
             troubleshooting_message=f'Column {column_name} does not exist in table {table_name}.'
         )
-        result.log(LOGGER)
+        result.log(LOGGER, duckdb_conn=con)
         return result
     
     # check for NOT NULL violations
@@ -73,5 +73,5 @@ def check_not_null_violation(
             table_name=table_name,
             column_name=column_name
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=con)
     return result
