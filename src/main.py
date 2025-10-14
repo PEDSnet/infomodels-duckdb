@@ -122,7 +122,6 @@ def main():
                 main_column=main_column,
                 reference_table=reference_table,
                 reference_column=reference_column,
-                threshold = {'PASS': 0.0, 'WARN': 0.01}
             )
             LOGGER.debug(f"Foreign Key Check Finished.")
         

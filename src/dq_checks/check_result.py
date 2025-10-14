@@ -48,7 +48,7 @@ class CheckResult:
         table_name: Optional[tuple[str,...] | str]= None,
         column_name: Optional[tuple[str,...] | str]= None,
         violation_pct: Optional[float] = None,
-        threshold: Optional[dict] = {'PASS': 0.0}, # define the upperbound of a status. Anything else will be FAIL status
+        threshold: Optional[dict] = None, # define the upperbound of a status. Anything else will be FAIL status
         troubleshooting_message: Optional[str] = None,
         **kwargs
     ):
