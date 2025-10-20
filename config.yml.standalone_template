@@ -9,7 +9,7 @@ submission_files:
 
 duckdb:
   path: /PATH/TO/STORE/SOME_FILENAME.duckdb # path to store cdm duckdb file generated
-  skip_load: []   # tables to skip loading into duckdb, comma separated list
+  skip_load: []   # tables to skip loading into duckdb, comma separated list, supports linux shell-style wildcards (e.g. 'measurement*' to skip all tables starting with 'measurement')
   copy_options: FORMAT CSV, HEADER, DELIM ',', ESCAPE '"'   # copy options in copy command https://duckdb.org/docs/stable/sql/statements/copy.html#csv-options
 
 core:

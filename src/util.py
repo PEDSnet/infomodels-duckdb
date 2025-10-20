@@ -2,27 +2,9 @@ import csv
 from typing import List, Dict
 from src.config import CONFIG
 import os
+from src.constants import DQ_THRESHOLDS
+import fnmatch
 
-# Optional CDM tables that are not required for submission
-# These tables will still be loaded if present in the submission files,
-# but are not included in any checks
-OPTIONAL_TABLES = [
-    'cohort_definition', 
-    'concept', 
-    'concept_ancestor', 
-    'concept_class', 
-    'concept_relationship', 
-    'concept_synonym', 
-    'condition_era', 
-    'domain', 
-    'dose_era', 
-    'drug_era', 
-    'drug_strength', 
-    'observation_period', 
-    'relationship', 
-    'source_to_concept_map', 
-    'vocabulary'
-]
 
 def get_csv_header(file_path: str, **kwargs) -> List[str]:
     """
@@ -117,3 +99,35 @@ def column_exists(con, table_name: str, column_name: str, schema: str = None) ->
         """
     all_columns = [item[0] for item in con.execute(sql).fetchall()]
     return column_name in all_columns
+
+def get_threshold(check_type: str, default_threshold: float = 0, **kwargs):
+    """
+    Retrieve the threshold value for a given check type based on optional matching criteria.
+
+    This function looks up a threshold value from a predefined global dictionary `DQ_THRESHOLDS`.
+    It supports pattern-based matching using fnmatch for flexible filtering of conditions.
+
+    Args:
+        check_type (str): The type of data quality check (must be a key in DQ_THRESHOLDS).
+        default_threshold (float, optional): The fallback threshold value if no criteria match.
+        **kwargs: Arbitrary keyword arguments representing matching criteria.
+
+    Returns:
+        float: The matched threshold value based on criteria or the default if no match is found.
+
+    Raises:
+        ValueError: If the provided check_type is not present in DQ_THRESHOLDS.
+    """
+    result_threshold = default_threshold
+    if check_type not in DQ_THRESHOLDS.keys():
+        raise ValueError(f"check_type: {check_type} is not defined in threshold check_type. Supported values are: {DQ_THRESHOLDS.keys()}")
+    for criterian in DQ_THRESHOLDS[check_type]:
+        mismatch_detected = False
+        for (search_arg, search_value) in kwargs.items():
+            if search_arg in criterian.keys():
+                if not fnmatch.fnmatch(search_value, criterian[search_arg]):
+                    mismatch_detected = True
+                    break
+        if not mismatch_detected:
+            result_threshold = criterian['threshold']
+    return result_threshold

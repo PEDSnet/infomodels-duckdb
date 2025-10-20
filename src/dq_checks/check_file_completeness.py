@@ -3,13 +3,14 @@ import os
 from typing import Tuple, List, Set
 from src.dq_checks.check_result import CheckResult
 from src.config import LOGGER
-from src.util import OPTIONAL_TABLES
+from src.constants import OPTIONAL_TABLES
 
 
 def check_missing_submission_file(
         file_dir: str, 
         cdm_tables_expected: Tuple[str, ...],
-        file_extension: str = '.csv'
+        file_extension: str = '.csv',
+        duckdb_conn = None
     ) -> CheckResult:
     """
     Check if the directory misses any expected CSV files for each CDM table.
@@ -39,13 +40,14 @@ def check_missing_submission_file(
             check_type = check_type,
             status = 'PASS'
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=duckdb_conn)
     return(result)
 
 def check_extra_submission_file(
         file_dir: str, 
         cdm_tables_expected: Tuple[str, ...],
-        file_extension: str = '.csv'
+        file_extension: str = '.csv',
+        duckdb_conn = None
     ) -> CheckResult:
     """
     Check if the directory contains extra CSV files for each CDM table.
@@ -76,5 +78,5 @@ def check_extra_submission_file(
             check_type = check_type,
             status = 'PASS'
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=duckdb_conn)
     return(result)

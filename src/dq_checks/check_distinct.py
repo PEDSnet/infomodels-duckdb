@@ -3,12 +3,13 @@ from src.util import get_table_count, table_exists, column_exists
 from src.config import LOGGER
 from duckdb import DuckDBPyConnection
 from typing import Optional
+from src.util import get_threshold
 
 def check_distinct_violation(
     con: DuckDBPyConnection,
     table_name: str,
     column_names: tuple[str] | str,
-    threshold: Optional[dict[str, float] ]= {'PASS': 0.0}
+    threshold: Optional[dict[str, float] ]= None
 ) -> CheckResult:
     """
     Check for DISTINCT constraint violations in the specified table and column.
@@ -23,6 +24,8 @@ def check_distinct_violation(
     """
     if isinstance(column_names, list):
         column_names = tuple(column_names, )
+    if threshold is None:
+        threshold = get_threshold('distinct_violation', table_name=table_name, column_name=column_names[0])
     # check if table and column exist
     if not table_exists(con, table_name):
         result = CheckResult(
@@ -32,7 +35,7 @@ def check_distinct_violation(
             status='SKIPPED',
             troubleshooting_message=f'Table {table_name} does not exist in the database.'
         )
-        result.log(LOGGER)
+        result.log(LOGGER, duckdb_conn=con)
         return result
     for column_name in column_names:
         if not column_exists(con, table_name, column_name):
@@ -43,7 +46,7 @@ def check_distinct_violation(
                 status='SKIPPED',
                 troubleshooting_message=f'Column {column_name} does not exist in table {table_name}.'
             )
-            result.log(LOGGER)
+            result.log(LOGGER, duckdb_conn=con)
             return result
     
     # check for DISTINCT violations
@@ -85,5 +88,5 @@ def check_distinct_violation(
             table_name=table_name,
             column_name=column_name,
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=con)
     return result

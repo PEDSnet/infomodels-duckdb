@@ -1,5 +1,7 @@
 from typing import Literal, Tuple, List, Optional
 import logging
+import duckdb
+
 
 class CheckResult:
     """
@@ -40,6 +42,7 @@ class CheckResult:
         "SKIPPED": "\033[94m" # BLUE
     }
 
+    run_id = None  # Class variable to store the current run ID
     def __init__(
         self,
         check_type: str, 
@@ -48,7 +51,7 @@ class CheckResult:
         table_name: Optional[tuple[str,...] | str]= None,
         column_name: Optional[tuple[str,...] | str]= None,
         violation_pct: Optional[float] = None,
-        threshold: Optional[dict] = {'PASS': 0.0}, # define the upperbound of a status. Anything else will be FAIL status
+        threshold: Optional[dict] = None, # define the upperbound of a status. Anything else will be FAIL status
         troubleshooting_message: Optional[str] = None,
         **kwargs
     ):
@@ -154,13 +157,18 @@ class CheckResult:
                 return
         self.status = 'FAIL'
 
-    def log(self, logger: logging.Logger, level_str: str = 'DQ'):
+    def log(self, logger: logging.Logger, level_str: str = 'DQ', duckdb_conn: Optional[duckdb.DuckDBPyConnection] = None, duckdb_schema: Optional[str] = 'logging', duckdb_table: Optional[str] = 'dq'):
         """
         Log the CheckResult using the provided logger at the specified log level. 
         Parameters:
             logger (logging.Logger): The logger to use for logging.
             level_str (str): The log level as a string ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'DQ').
                 'DQ' is a custom level for data quality logs, mapped to INFO level.
+            duckdb_conn (Optional[duckdb.DuckDBPyConnection]): Optional DuckDB connection to log the result into a DuckDB table.
+            duckdb_schema (Optional[str]): The schema name in DuckDB where the log table resides. Defaults to 'logging'.
+            duckdb_table (Optional[str]): The table name in DuckDB where the log records will be inserted. Defaults to 'dq'.
+        Raises:
+            ValueError: If an invalid log level is provided.
         """
         if level_str not in logging._nameToLevel.keys():
             raise ValueError(
@@ -169,6 +177,12 @@ class CheckResult:
         
         log_level = logging._nameToLevel[level_str]
         logger.log(log_level, self.__str__())
+        if duckdb_conn:
+            # insert log record
+            duckdb_conn.execute(f"""
+                INSERT INTO {duckdb_schema}.{duckdb_table} (run_id, log_time, status, check_type, file_name, table_name, column_name, violation_pct, threshold, message, extra_info)
+                VALUES (?,current_localtimestamp(), ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """, (self.run_id,self.status, self.check_type, self.file_name, self.table_name, self.column_name, self.violation_pct, str(self.threshold), self.__str__(), str(self.kwargs)))
 
     def summary(
             logger: Optional[logging.Logger] = None, 

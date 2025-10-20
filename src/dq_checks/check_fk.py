@@ -1,6 +1,6 @@
 
 from src.dq_checks.check_result import CheckResult
-from src.util import get_table_count, table_exists, column_exists
+from src.util import get_table_count, table_exists, column_exists, get_threshold
 from src.config import LOGGER
 from duckdb import DuckDBPyConnection
 from typing import Optional
@@ -11,7 +11,7 @@ def check_fk_violation(
     main_column: str,
     reference_table: str,
     reference_column: str,
-    threshold: Optional[dict[str, float] ]= {'PASS': 0.0}
+    threshold: Optional[dict[str, float] ]= None
 ) -> CheckResult:
     """
     Check for foreign key violations in the specified tables and columns.
@@ -26,7 +26,8 @@ def check_fk_violation(
     Returns:
     - dict: A dictionary with keys 'status' and 'message'.
     """
-    
+    if threshold is None:
+        threshold = get_threshold('foreign_key_violation', table_name=main_table, column_name=main_column)
     # check if main_column in main_table exists, reference_column in reference_table exists
     if not table_exists(con, main_table):
         result = CheckResult(
@@ -117,5 +118,5 @@ def check_fk_violation(
                 reference_column=reference_column
             )
             
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=con)
     return result

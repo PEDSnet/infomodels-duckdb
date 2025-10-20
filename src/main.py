@@ -1,8 +1,8 @@
 from src.config import CONFIG, LOGGER
 from src.dq_checks.check_result import CheckResult
-from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb
+from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb, init_duckdb_logging_schema
 from src.data_model import DataModel
-from src.util import OPTIONAL_TABLES
+from src.constants import OPTIONAL_TABLES
 from src.dq_checks.check_file_completeness import check_missing_submission_file, check_extra_submission_file
 from src.dq_checks.check_header import check_duplicated_column_in_csv, check_extra_column_in_csv, check_missing_column_in_csv
 from src.dq_checks.check_fk import check_fk_violation
@@ -10,20 +10,27 @@ from src.dq_checks.check_not_null import check_not_null_violation
 from src.dq_checks.check_distinct import check_distinct_violation
 import duckdb
 import os
+import fnmatch
+from datetime import datetime
+
 
 def main():
-    LOGGER.info("Running with config: " + str(CONFIG))  
+    run_id = datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
+    CheckResult.run_id = run_id
     with duckdb.connect(CONFIG['duckdb']['path']) as con:
-        skip_check_tables = list(OPTIONAL_TABLES)
-        skip_check_columns = dict() # a dict of {table_name: (column_name, ...)}
-        skip_duckdb_load_tables = list(CONFIG['duckdb'].get('skip_load', []))
-        LOGGER.debug(f"Tables to skip loading into DuckDB from config: {skip_duckdb_load_tables}")
-
+        init_duckdb_logging_schema(con, run_id, CONFIG)
+        LOGGER.info(f"Run ID: {run_id}.\nRunning with config: " + str(CONFIG))  
         # get data models
         LOGGER.info(f"Loading data models with config: {CONFIG['data-models']}")
         data_model = DataModel(**CONFIG['data-models'])
         #data_models_dict = data_model.data
         LOGGER.info("Data models loaded successfully. ")
+
+        skip_check_tables = list(OPTIONAL_TABLES)
+        skip_check_columns = dict() # a dict of {table_name: (column_name, ...)}
+        skip_duckdb_load_table_patterns = list(CONFIG['duckdb'].get('skip_load', []))
+        skip_duckdb_load_tables = [table for table in data_model.all_table_names() if any(fnmatch.fnmatch(table, pattern) for pattern in skip_duckdb_load_table_patterns)]
+        LOGGER.debug(f"Tables to skip loading into DuckDB from config: {skip_duckdb_load_tables}")
 
         # Initialize DuckDB database
         LOGGER.info("Initializing DuckDB database.")
@@ -35,8 +42,7 @@ def main():
         submission_file_extension = CONFIG['submission_files'].get('file_extension', '.csv')
 
         LOGGER.debug("Checking submission files completeness.")
-        required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES))
-
+        required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES) - set(skip_duckdb_load_tables))
         check_result_missing_submission_file = check_missing_submission_file(
             file_dir = submission_dir,
             cdm_tables_expected = required_cdm_tables,
@@ -115,7 +121,6 @@ def main():
                 main_column=main_column,
                 reference_table=reference_table,
                 reference_column=reference_column,
-                threshold = {'PASS': 0.0, 'WARN': 0.01}
             )
             LOGGER.debug(f"Foreign Key Check Finished.")
         
@@ -152,7 +157,6 @@ def main():
                 con=con,
                 table_name=table_name,
                 column_names=column_name,
-                threshold = {'PASS': 0.0, 'WARN': 0.01}
             )
             LOGGER.debug(f"Distinct Check Finished.")
         

@@ -2,13 +2,13 @@ from src.dq_checks.check_result import CheckResult
 from src.config import LOGGER
 from duckdb import DuckDBPyConnection
 from typing import Optional
-from src.util import get_table_count, table_exists, column_exists
+from src.util import get_table_count, table_exists, column_exists, get_threshold
 
 def check_not_null_violation(
     con: DuckDBPyConnection,
     table_name: str,
     column_name: str,
-    threshold: Optional[dict[str, float] ]= {'PASS': 0.0}
+    threshold: Optional[dict[str, float] ]= None
 ) -> CheckResult:
     """
     Check for NOT NULL constraint violations in the specified table and column.
@@ -21,6 +21,8 @@ def check_not_null_violation(
     Returns:
     - CheckResult: Result of the NOT NULL check.
     """
+    if threshold is None:
+        threshold = get_threshold('not_null_violation', table_name=table_name, column_name=column_name)
     # check if table and column exist
     if not table_exists(con, table_name):
         result = CheckResult(
@@ -30,7 +32,7 @@ def check_not_null_violation(
             status='SKIPPED',
             troubleshooting_message=f'Table {table_name} does not exist in the database.'
         )
-        result.log(LOGGER)
+        result.log(LOGGER, duckdb_conn=con)
         return result
     elif not column_exists(con, table_name, column_name):
         result = CheckResult(
@@ -40,7 +42,7 @@ def check_not_null_violation(
             status='SKIPPED',
             troubleshooting_message=f'Column {column_name} does not exist in table {table_name}.'
         )
-        result.log(LOGGER)
+        result.log(LOGGER, duckdb_conn=con)
         return result
     
     # check for NOT NULL violations
@@ -71,5 +73,5 @@ def check_not_null_violation(
             table_name=table_name,
             column_name=column_name
         )
-    result.log(LOGGER)
+    result.log(LOGGER, duckdb_conn=con)
     return result
