@@ -157,7 +157,6 @@ def main():
                 con=con,
                 table_name=table_name,
                 column_names=column_name,
-                threshold = {'PASS': 0.0, 'WARN': 0.01}
             )
             LOGGER.debug(f"Distinct Check Finished.")
         
