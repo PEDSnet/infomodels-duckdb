@@ -15,7 +15,10 @@ from datetime import datetime
 
 
 def main():
-    run_id = datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
+    run_id = CONFIG['core'].get(
+        'run_id', 
+        datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
+    )
     CheckResult.run_id = run_id
     with duckdb.connect(CONFIG['duckdb']['path']) as con:
         init_duckdb_logging_schema(con, run_id, CONFIG)
