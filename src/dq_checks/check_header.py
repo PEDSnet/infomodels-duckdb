@@ -4,13 +4,15 @@ from collections import Counter
 from src.config import LOGGER
 from src.data_model import DataModel
 
-def check_duplicated_column_in_csv(file_path: str, table_name: str, duckdb_conn = None) -> CheckResult:
+def check_duplicated_column_in_csv(file_path: str, table_name: str, duckdb_conn = None, context = None) -> CheckResult:
     """
     Check if the CSV file has duplicated columns in its header.
 
     Parameters:
         file_path (str): Path to the CSV file.
         table_name (str): Name of the CDM table to check against.
+        duckdb_conn: Optional DuckDB connection for logging.
+        context: Optional context object for additional runtime information update.
 
     Returns:
         CheckResult: Result of the check, indicating whether the CSV header has duplicated columns.
@@ -26,6 +28,10 @@ def check_duplicated_column_in_csv(file_path: str, table_name: str, duckdb_conn 
             column_name = tuple(duplicated_columns),
             troubleshooting_message = 'The file will not be loaded. Please remove duplicated column(s) in file. '
         )
+        if context:
+            # if the csv has duplicated columns, don't load the table to duckdb. Also skip other checks on this table.
+            context.skip_duckdb_load_tables.append(table_name)
+            context.skip_check_tables.append(table_name)
     else:
         result = CheckResult(
             check_type = 'csv header duplication',
@@ -44,6 +50,7 @@ def check_extra_column_in_csv(file_path: str, data_model: DataModel, table_name:
         file_path (str): Path to the CSV file.
         data_model (DataModel): DataModel object containing CDM table definitions.
         table_name (str): Name of the CDM table to check against.
+        duckdb_conn: Optional DuckDB connection for logging.
 
     Returns:
         CheckResult: Result of the check, indicating whether the CSV header has extra columns.
@@ -69,7 +76,7 @@ def check_extra_column_in_csv(file_path: str, data_model: DataModel, table_name:
     result.log(LOGGER, duckdb_conn=duckdb_conn)
     return result
 
-def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_name: str, duckdb_conn = None) -> CheckResult:
+def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_name: str, duckdb_conn = None, context = None) -> CheckResult:
     """
     Check if the CSV file has all the required columns defined in the CDM table definition.
 
@@ -77,6 +84,8 @@ def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_nam
         file_path (str): Path to the CSV file.
         data_model (DataModel): DataModel object containing CDM table definitions.
         table_name (str): Name of the CDM table to check against.
+        duckdb_conn: Optional DuckDB connection for logging.
+        context: Optional context object for additional runtime information update.
 
     Returns:
         CheckResult: Result of the check, indicating whether the CSV header is missing any required columns.
@@ -93,6 +102,8 @@ def check_missing_column_in_csv(file_path: str, data_model: DataModel, table_nam
             table_name = table_name,
             column_name = tuple(missing_csv_column)
         )
+        if context:
+            context.skip_check_columns[table_name] = context.skip_check_columns.get(table_name, tuple()) + tuple(missing_csv_column)
     else:
         result = CheckResult(
             check_type = 'missing column in csv header',
