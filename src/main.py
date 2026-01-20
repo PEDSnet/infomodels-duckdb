@@ -13,6 +13,22 @@ import os
 import fnmatch
 from datetime import datetime
 
+class _Context():
+    '''An explicit context class to hold dynamic state variables during the DQ run.'''
+    def __init__(
+        self, 
+        run_id: str, 
+        skip_check_tables: list = [],
+        skip_check_columns: dict = {}, # a dict of {table_name: (column_name, ...)}
+        skip_duckdb_load_tables: list = [],
+        **kwargs
+    ):
+        self.run_id = run_id
+        self.skip_check_tables = skip_check_tables
+        self.skip_duckdb_load_tables = skip_duckdb_load_tables
+        self.skip_check_columns = skip_check_columns
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 def main():
     run_id = CONFIG['core'].get(
@@ -20,6 +36,7 @@ def main():
         datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
     )
     CheckResult.run_id = run_id
+    context = _Context(run_id=run_id) # initialize context.
     with duckdb.connect(CONFIG['duckdb']['path']) as con:
         init_duckdb_logging_schema(con, run_id, CONFIG)
         LOGGER.info(f"Run ID: {run_id}.\nRunning with config: " + str(CONFIG))  
@@ -29,15 +46,15 @@ def main():
         #data_models_dict = data_model.data
         LOGGER.info("Data models loaded successfully. ")
 
-        skip_check_tables = list(OPTIONAL_TABLES)
-        skip_check_columns = dict() # a dict of {table_name: (column_name, ...)}
-        skip_duckdb_load_table_patterns = list(CONFIG['duckdb'].get('skip_load', []))
-        skip_duckdb_load_tables = [table for table in data_model.all_table_names() if any(fnmatch.fnmatch(table, pattern) for pattern in skip_duckdb_load_table_patterns)]
-        LOGGER.debug(f"Tables to skip loading into DuckDB from config: {skip_duckdb_load_tables}")
+        context.skip_check_tables = list(OPTIONAL_TABLES)
+        context.skip_check_columns = dict() # a dict of {table_name: (column_name, ...)}
+        _skip_duckdb_load_table_patterns = list(CONFIG['duckdb'].get('skip_load', []))
+        context.skip_duckdb_load_tables = [table for table in data_model.all_table_names() if any(fnmatch.fnmatch(table, pattern) for pattern in _skip_duckdb_load_table_patterns)]
+        LOGGER.debug(f"Tables to skip loading into DuckDB from config: {context.skip_duckdb_load_tables}")
 
         # Initialize DuckDB database
         LOGGER.info("Initializing DuckDB database.")
-        create_duckdb_tables(data_model, con, skip_tables = skip_duckdb_load_tables, recreate = True)
+        create_duckdb_tables(data_model, con, skip_tables = context.skip_duckdb_load_tables, recreate = True)
         LOGGER.info("DuckDB tables created successfully.")
 
         # check submission files completeness
@@ -45,7 +62,7 @@ def main():
         submission_file_extension = CONFIG['submission_files'].get('file_extension', '.csv')
 
         LOGGER.debug("Checking submission files completeness.")
-        required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES) - set(skip_duckdb_load_tables))
+        required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES) - set(context.skip_duckdb_load_tables))
         check_result_missing_submission_file = check_missing_submission_file(
             file_dir = submission_dir,
             cdm_tables_expected = required_cdm_tables,
@@ -53,7 +70,7 @@ def main():
         )
         if check_result_missing_submission_file.status != 'PASS':
             # skip checks for missing tables
-            skip_check_tables.extend(check_result_missing_submission_file.table_name)
+            context.skip_check_tables.extend(check_result_missing_submission_file.table_name)
 
         LOGGER.debug("Checking for extra submission files.")
         check_result_extra_submission_file = check_extra_submission_file(
@@ -71,19 +88,13 @@ def main():
                 continue
             LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
             # check duplicated columns in csv
-            check_result_duplicated_column = check_duplicated_column_in_csv(file_path, table_name)
-            if check_result_duplicated_column.status != 'PASS':
-                # if the csv has duplicated columns, don't load the table to duckdb
-                skip_duckdb_load_tables.append(table_name)
-                skip_check_tables.append(table_name)
+            check_result_duplicated_column = check_duplicated_column_in_csv(file_path, table_name, context)
 
             # check extra columns in csv
             check_result_extra_column = check_extra_column_in_csv(file_path, data_model, table_name)
 
             # check missing columns in csv
-            check_result_missing_column = check_missing_column_in_csv(file_path, data_model, table_name)
-            if check_result_missing_column.status != 'PASS':
-                skip_check_columns.get(table_name, tuple()) + check_result_missing_column.column_name
+            check_result_missing_column = check_missing_column_in_csv(file_path, data_model, table_name, context)
         
         # Loading csv files to DuckDB
         for table_name in data_model.all_table_names():
@@ -91,7 +102,7 @@ def main():
             if not os.path.isfile(file_path):
                 LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load.")
                 continue
-            if table_name in skip_duckdb_load_tables:
+            if table_name in context.skip_duckdb_load_tables:
                 LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
                 continue
             LOGGER.debug(f"Loading {file_path} into DuckDB table {table_name}.")
@@ -106,16 +117,16 @@ def main():
             main_column = fk_definition['source_field']
             reference_table = fk_definition['target_table']
             reference_column = fk_definition['target_field']
-            if main_table in skip_check_tables:
+            if main_table in context.skip_check_tables:
                 LOGGER.debug(f"Skipping foreign key check for {main_table}.{main_column} referencing {reference_table}.{reference_column} as main table is in the skip list.")
                 continue
-            if reference_table in skip_check_tables or reference_table in skip_check_tables:
+            if reference_table in context.skip_check_tables or reference_table in context.skip_check_tables:
                 LOGGER.debug(f"Skipping foreign key check for {main_table}.{main_column} referencing {reference_table}.{reference_column} as reference table is in the skip list.")
                 continue
-            if main_table in skip_check_columns.keys() and main_column in skip_check_columns[main_table]:
+            if main_table in context.skip_check_columns.keys() and main_column in context.skip_check_columns[main_table]:
                 LOGGER.debug(f"Skipping foreign key check for {main_table}.{main_column} referencing {reference_table}.{reference_column} as the main column is in the skip list.")
                 continue
-            if reference_table in skip_check_columns.keys() and reference_column in skip_check_columns[reference_table]:
+            if reference_table in context.skip_check_columns.keys() and reference_column in context.skip_check_columns[reference_table]:
                 LOGGER.debug(f"Skipping foreign key check for {main_table}.{main_column} referencing {reference_table}.{reference_column} as the reference column is in the skip list.")
                 continue
             check_result_fk = check_fk_violation(
@@ -132,10 +143,10 @@ def main():
             table_name = not_null_definition['table']
             column_name = not_null_definition['field']
 
-            if table_name in skip_check_tables:
+            if table_name in context.skip_check_tables:
                 LOGGER.debug(f"Skipping Not Null check for {table_name}.{column_name} as table is in the skip list.")
                 continue
-            if table_name in skip_check_columns.keys() and column_name in skip_check_columns[table_name]:
+            if table_name in context.skip_check_columns.keys() and column_name in context.skip_check_columns[table_name]:
                 LOGGER.debug(f"Skipping Not Null check for {table_name}.{column_name} as column is in the skip list.")
                 continue
             check_result_not_null = check_not_null_violation(
@@ -150,10 +161,10 @@ def main():
             table_name = distinct_definition['table']
             column_name = distinct_definition['field']
 
-            if table_name in skip_check_tables:
+            if table_name in context.skip_check_tables:
                 LOGGER.debug(f"Skipping Distinct check for {table_name}.{column_name} as table is in the skip list.")
                 continue
-            if table_name in skip_check_columns.keys() and column_name in skip_check_columns[table_name]:
+            if table_name in context.skip_check_columns.keys() and column_name in context.skip_check_columns[table_name]:
                 LOGGER.debug(f"Skipping Distinct check for {table_name}.{column_name} as column is in the skip list.")
                 continue
             check_result_distinct = check_distinct_violation(
@@ -169,10 +180,10 @@ def main():
             table_name = pk_definition['table']
             column_names = tuple(pk_definition['fields'])  # list of columns in the primary key
 
-            if table_name in skip_check_tables:
+            if table_name in context.skip_check_tables:
                 LOGGER.debug(f"Skipping Primary Key check for {table_name}({', '.join(column_names)}) as table is in the skip list.")
                 continue
-            if table_name in skip_check_columns.keys() and any(col in skip_check_columns[table_name] for col in column_names):
+            if table_name in context.skip_check_columns.keys() and any(col in context.skip_check_columns[table_name] for col in column_names):
                 LOGGER.debug(f"Skipping Primary Key check for {table_name}({', '.join(column_names)}) as one or more columns are in the skip list.")
                 continue
             # check not null for each column in the primary key
