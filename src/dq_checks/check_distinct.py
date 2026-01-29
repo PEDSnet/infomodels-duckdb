@@ -57,8 +57,8 @@ def check_distinct_violation(
     """
     sample_query = f"""
         SELECT "{column_name}" AS value_count
-        GROUP BY {', '.join(['"' + col + '"' for col in column_names])}
         FROM "{table_name}"
+        GROUP BY {', '.join(['"' + col + '"' for col in column_names])}
         HAVING COUNT(*) > 1
         LIMIT 10;
     """
