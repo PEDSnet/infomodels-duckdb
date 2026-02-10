@@ -1,10 +1,10 @@
 from src.config import CONFIG, LOGGER
 from src.dq_checks.check_result import CheckResult
-from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb, init_duckdb_logging_schema
+from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb, init_duckdb_logging_schema, load_parquet_to_duckdb
 from src.data_model import DataModel
 from src.constants import OPTIONAL_TABLES
 from src.dq_checks.check_file_completeness import check_missing_submission_file, check_extra_submission_file
-from src.dq_checks.check_header import check_duplicated_column_in_csv, check_extra_column_in_csv, check_missing_column_in_csv
+from src.dq_checks.check_header import check_duplicated_column_in_csv, check_extra_column_in_csv, check_missing_column_in_csv, check_extra_column_in_parquet, check_missing_column_in_parquet
 from src.dq_checks.check_fk import check_fk_violation
 from src.dq_checks.check_not_null import check_not_null_violation
 from src.dq_checks.check_distinct import check_distinct_violation
@@ -59,54 +59,115 @@ def main():
 
         # check submission files completeness
         submission_dir = CONFIG['submission_files']['dir']
-        submission_file_extension = CONFIG['submission_files'].get('file_extension', '.csv')
+        submission_file_format = CONFIG['submission_files'].get('file_format', 'csv')
+        if_multiple_file_per_table = CONFIG['submission_files'].get('multiple_file_per_table', False)
 
         LOGGER.debug("Checking submission files completeness.")
         required_cdm_tables = tuple(set(data_model.all_table_names()) - set(OPTIONAL_TABLES) - set(context.skip_duckdb_load_tables))
         check_result_missing_submission_file = check_missing_submission_file(
             file_dir = submission_dir,
             cdm_tables_expected = required_cdm_tables,
-            file_extension = submission_file_extension
+            file_format = submission_file_format,
+            multiple_file_per_table = if_multiple_file_per_table,
+            duckdb_conn = con
         )
-        if check_result_missing_submission_file.status != 'PASS':
+        if check_result_missing_submission_file.status not in ('PASS', 'SKIPPED'):
             # skip checks for missing tables
             context.skip_check_tables.extend(check_result_missing_submission_file.table_name)
+            context.skip_duckdb_load_tables.extend(check_result_missing_submission_file.table_name)
 
         LOGGER.debug("Checking for extra submission files.")
         check_result_extra_submission_file = check_extra_submission_file(
             file_dir = submission_dir,
             cdm_tables_expected = data_model.all_table_names(),
-            file_extension = submission_file_extension
+            file_format = submission_file_format,
+            multiple_file_per_table = if_multiple_file_per_table,
+            duckdb_conn = con
         )
 
-        # check header issues
-        for table_name in data_model.all_table_names():
-            # check if file exists for the table
-            file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
-            if not os.path.isfile(file_path):
-                LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks.")
-                continue
-            LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
-            # check duplicated columns in csv
-            check_result_duplicated_column = check_duplicated_column_in_csv(file_path, table_name, context)
+        # Check header issues
+        if submission_file_format not in ('csv', 'parquet'):
+            raise ValueError(f"Unsupported submission file format: {submission_file_format}. Supported formats are 'csv' and 'parquet'.")
+        # TODO: implement csv header checks for multiple files per table later
+        if submission_file_format == 'csv' and if_multiple_file_per_table:
+            raise NotImplementedError("Header checks for multiple files per table in CSV format are not implemented yet. For now, please merge your csv files into single file.")
+        if submission_file_format == 'csv' and not if_multiple_file_per_table:
+            submission_file_extension = '.csv'
+            # check header issues
+            for table_name in data_model.all_table_names():
+                # check if file exists for the table
+                file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
+                if not os.path.isfile(file_path):
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks.")
+                    continue
+                LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
+                # check duplicated columns in csv
+                check_result_duplicated_column = check_duplicated_column_in_csv(file_path, table_name)
+                if check_result_duplicated_column.status != 'PASS':
+                    # if the csv has duplicated columns, don't load the table to duckdb
+                    context.skip_duckdb_load_tables.append(table_name)
+                    context.skip_check_tables.append(table_name)
+                # check extra columns in csv
+                check_result_extra_column = check_extra_column_in_csv(file_path, data_model, table_name)
+                # check missing columns in csv
+                check_result_missing_column = check_missing_column_in_csv(file_path, data_model, table_name)
+                if check_result_missing_column.status != 'PASS':
+                    context.skip_check_columns[table_name] = context.skip_check_columns.get(table_name, tuple()) + check_result_missing_column.column_name
+        if submission_file_format == 'parquet':
+            if if_multiple_file_per_table:
+                submission_file_extension = '.parquet'
+            else:
+                submission_file_extension = ''
+            # check header issues
+            for table_name in data_model.all_table_names():
+                file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
+                # check if file_path exists
+                if not os.path.exists(file_path):
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks.")
+                    continue
+                LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
+                # check extra columns in parquet
+                check_result_extra_column = check_extra_column_in_parquet(file_path, data_model, table_name)
+                # check missing columns in parquet
+                check_result_missing_column = check_missing_column_in_parquet(file_path, data_model, table_name)
+                if check_result_missing_column.status != 'PASS':
+                    context.skip_check_columns[table_name] = context.skip_check_columns.get(table_name, tuple()) + check_result_missing_column.column_name
+        # Load submission files into DuckDB
+        LOGGER.info("Loading submission files into DuckDB.")
+        # TODO: implement csv load for multiple files per table later
+        if submission_file_format == 'csv' and if_multiple_file_per_table:
+            raise NotImplementedError("Loading multiple files per table in CSV format into DuckDB is not implemented yet. Please merge your csv files into single file per table.")
+        if submission_file_format == 'csv' and not if_multiple_file_per_table:
+            submission_file_extension = '.csv'
+            # Loading csv files to DuckDB
+            for table_name in data_model.all_table_names():
+                file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
+                if not os.path.isfile(file_path):
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load.")
+                    continue
+                if table_name in context.skip_duckdb_load_tables:
+                    LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
+                    continue
+                LOGGER.info(f"Loading {file_path} into DuckDB table {table_name}.")
+                load_csv_to_duckdb(csv_path=file_path, con=con, table_name=table_name, accept_additional_col=True)
+        if submission_file_format == 'parquet':
+            if if_multiple_file_per_table:
+                submission_file_extension = '.parquet'
+            else:
+                submission_file_extension = ''
+            # Loading parquet files to DuckDB
+            for table_name in data_model.all_table_names():
+                file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
+                # check if file_path exists
+                if not os.path.exists(file_path):
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load.")
+                    continue
+                if table_name in context.skip_duckdb_load_tables:
+                    LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
+                    continue
+                LOGGER.info(f"Loading {file_path} into DuckDB table {table_name}.")
+                load_parquet_to_duckdb(parquet_path=file_path, con=con, table_name=table_name, accept_additional_col=True)
 
-            # check extra columns in csv
-            check_result_extra_column = check_extra_column_in_csv(file_path, data_model, table_name)
-
-            # check missing columns in csv
-            check_result_missing_column = check_missing_column_in_csv(file_path, data_model, table_name, context)
-        
-        # Loading csv files to DuckDB
-        for table_name in data_model.all_table_names():
-            file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
-            if not os.path.isfile(file_path):
-                LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load.")
-                continue
-            if table_name in context.skip_duckdb_load_tables:
-                LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
-                continue
-            LOGGER.debug(f"Loading {file_path} into DuckDB table {table_name}.")
-            load_csv_to_duckdb(csv_path=file_path, con=con, table_name=table_name, accept_additional_col=True)
 
         LOGGER.info("All submission files loaded into DuckDB successfully.")
         
