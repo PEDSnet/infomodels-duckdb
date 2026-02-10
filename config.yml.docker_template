@@ -5,7 +5,8 @@ data-models:
 
 submission_files:
   dir: /data # THIS IS A MOUNTED VOLUME IN DOCKER. DO NOT CHANGE!
-  extension: .csv
+  file_format: csv  # file_type can be 'csv' or 'parquet'
+  multiple_file_per_table: false  # Set to false if each table is a single file named {table_name}.csv or {table_name}.parquet. Set to true if each table can have multiple files in a folder named after the table. Currently only support parquet
 
 duckdb:
   path: /result/cdm.duckdb # THIS IS A MOUNTED VOLUME IN DOCKER. DO NOT CHANGE!

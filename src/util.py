@@ -1,9 +1,10 @@
 import csv
 from typing import List, Dict
-from src.config import CONFIG
+from src.config import CONFIG, LOGGER
 import os
 from src.constants import DQ_THRESHOLDS
 import fnmatch
+import duckdb
 
 
 def get_csv_header(file_path: str, **kwargs) -> List[str]:
@@ -26,6 +27,21 @@ def get_csv_header(file_path: str, **kwargs) -> List[str]:
             raise ValueError(f"CSV file: {file_path} is empty.")
         else:
             return([x.lower() for x in header])
+
+def get_parquet_header(file_path: str) -> List[str]:
+    """
+    Get header column list from a parquet file.
+
+    Args:
+        file_path (str): path to parquet file.
+    Returns:
+        list[str]: A list of strings, each representing a column name. 
+    """
+    with duckdb.connect(database=':memory:') as con:
+        con.execute(f"DESCRIBE SELECT * FROM read_parquet('{file_path}')")
+        header = [item[0].lower() for item in con.fetchall()]
+        LOGGER.debug(f"Parquet file: {file_path} has columns: {header}")
+        return header
 
 def get_table_count(
         con, 
