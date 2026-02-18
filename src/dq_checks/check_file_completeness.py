@@ -53,7 +53,7 @@ def check_missing_submission_file(
         CheckResult
     """
     LOGGER.info("Running DQ check: check_missing_submission_file. "
-            "Params: file_dir={file_dir}, cdm_tables_expected={cdm_tables_expected}, file_format={file_format}, multiple_file_per_table={multiple_file_per_table}")
+            f"Params: file_dir={file_dir}, cdm_tables_expected={cdm_tables_expected}, file_format={file_format}, multiple_file_per_table={multiple_file_per_table}")
     check_type = 'missing_submission_file'
     if cdm_tables_expected is None or len(cdm_tables_expected) == 0:
         result = CheckResult(
