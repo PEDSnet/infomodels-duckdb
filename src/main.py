@@ -98,7 +98,7 @@ def main():
                 # check if file exists for the table
                 file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
                 if not os.path.isfile(file_path):
-                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks.")
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks. Path: {file_path}")
                     continue
                 LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
                 # check duplicated columns in csv
@@ -115,15 +115,15 @@ def main():
                     context.skip_check_columns[table_name] = context.skip_check_columns.get(table_name, tuple()) + check_result_missing_column.column_name
         if submission_file_format == 'parquet':
             if if_multiple_file_per_table:
-                submission_file_extension = '.parquet'
-            else:
                 submission_file_extension = ''
+            else:
+                submission_file_extension = '.parquet'
             # check header issues
             for table_name in data_model.all_table_names():
                 file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
                 # check if file_path exists
                 if not os.path.exists(file_path):
-                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks.")
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping header checks. Path: {file_path}")
                     continue
                 LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
                 # check extra columns in parquet
@@ -143,7 +143,7 @@ def main():
             for table_name in data_model.all_table_names():
                 file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
                 if not os.path.isfile(file_path):
-                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load.")
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load. Path: {file_path}")
                     continue
                 if table_name in context.skip_duckdb_load_tables:
                     LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
@@ -152,15 +152,15 @@ def main():
                 load_csv_to_duckdb(csv_path=file_path, con=con, table_name=table_name, accept_additional_col=True)
         if submission_file_format == 'parquet':
             if if_multiple_file_per_table:
-                submission_file_extension = '.parquet'
-            else:
                 submission_file_extension = ''
+            else:
+                submission_file_extension = '.parquet'
             # Loading parquet files to DuckDB
             for table_name in data_model.all_table_names():
                 file_path = f"{submission_dir}/{table_name}{submission_file_extension}"
                 # check if file_path exists
                 if not os.path.exists(file_path):
-                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load.")
+                    LOGGER.debug(f"No submission file found for table {table_name}. Skipping DuckDB load. Path: {file_path}")
                     continue
                 if table_name in context.skip_duckdb_load_tables:
                     LOGGER.debug(f"Skipping loading {table_name} to DuckDB as it is in the skip list.")
