@@ -12,7 +12,7 @@ duckdb:
   path: /result/cdm.duckdb # THIS IS A MOUNTED VOLUME IN DOCKER. DO NOT CHANGE!
   skip_load: []   # tables to skip loading into duckdb, comma separated list, supports linux shell-style wildcards (e.g. 'measurement*' to skip all tables starting with 'measurement')
   copy_options: FORMAT CSV, HEADER, DELIM ',', ESCAPE '"'   # copy options in copy command https://duckdb.org/docs/stable/sql/statements/copy.html#csv-options
-  # memory_limit: 32g  # Optional config to limit the memory usage by duckdb
+  # memory_limit: 32GB  # Optional config to limit the memory usage by duckdb
 
 core:
   log_level: INFO
