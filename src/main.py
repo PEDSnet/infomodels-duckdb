@@ -38,6 +38,8 @@ def main():
     CheckResult.run_id = run_id
     context = _Context(run_id=run_id) # initialize context.
     with duckdb.connect(CONFIG['duckdb']['path']) as con:
+        if CONFIG['duckdb'].get('memory_limit', None):
+            con.execute(f"SET memory_limit='{CONFIG['duckdb']['memory_limit']}'")
         init_duckdb_logging_schema(con, run_id, CONFIG)
         LOGGER.info(f"Run ID: {run_id}.\nRunning with config: " + str(CONFIG))  
         # get data models
