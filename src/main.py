@@ -40,6 +40,7 @@ def main():
     with duckdb.connect(CONFIG['duckdb']['path']) as con:
         if CONFIG['duckdb'].get('memory_limit', None):
             con.execute(f"SET memory_limit='{CONFIG['duckdb']['memory_limit']}'")
+        con.execute("SET preserve_insertion_order=false")
         init_duckdb_logging_schema(con, run_id, CONFIG)
         LOGGER.info(f"Run ID: {run_id}.\nRunning with config: " + str(CONFIG))  
         # get data models
