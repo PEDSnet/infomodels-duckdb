@@ -111,9 +111,9 @@ def main():
                     context.skip_duckdb_load_tables.append(table_name)
                     context.skip_check_tables.append(table_name)
                 # check extra columns in csv
-                check_result_extra_column = check_extra_column_in_csv(file_path, data_model, table_name)
+                check_result_extra_column = check_extra_column_in_csv(file_path, data_model, table_name, duckdb_conn=con)
                 # check missing columns in csv
-                check_result_missing_column = check_missing_column_in_csv(file_path, data_model, table_name)
+                check_result_missing_column = check_missing_column_in_csv(file_path, data_model, table_name, duckdb_conn=con)
                 if check_result_missing_column.status != 'PASS':
                     context.skip_check_columns[table_name] = context.skip_check_columns.get(table_name, tuple()) + check_result_missing_column.column_name
         if submission_file_format == 'parquet':
@@ -130,9 +130,9 @@ def main():
                     continue
                 LOGGER.debug(f"Checking header for table: {table_name}, file: {file_path}")
                 # check extra columns in parquet
-                check_result_extra_column = check_extra_column_in_parquet(file_path, data_model, table_name)
+                check_result_extra_column = check_extra_column_in_parquet(file_path, data_model, table_name, duckdb_conn=con)
                 # check missing columns in parquet
-                check_result_missing_column = check_missing_column_in_parquet(file_path, data_model, table_name)
+                check_result_missing_column = check_missing_column_in_parquet(file_path, data_model, table_name, duckdb_conn=con)
                 if check_result_missing_column.status != 'PASS':
                     context.skip_check_columns[table_name] = context.skip_check_columns.get(table_name, tuple()) + check_result_missing_column.column_name
         # Load submission files into DuckDB
