@@ -8,6 +8,7 @@ from src.dq_checks.check_header import check_duplicated_column_in_csv, check_ext
 from src.dq_checks.check_fk import check_fk_violation
 from src.dq_checks.check_not_null import check_not_null_violation
 from src.dq_checks.check_distinct import check_distinct_violation
+from src.dq_checks.check_fact_relationship import check_fact_relationship
 import duckdb
 import os
 import fnmatch
@@ -267,6 +268,11 @@ def main():
             LOGGER.debug(f"Primary Key Distinct Check Finished for {table_name}({', '.join(column_names)}).")
             LOGGER.debug(f"Primary Key Check Finished for {table_name}.{column_names}.")
 
+        # Check fact_relationship
+        check_result_fact_relationship = check_fact_relationship(
+            con=con,
+            skip_tables = context.skip_check_tables
+        )
         
         # Summarize DQ results
         CheckResult.summary(LOGGER)
