@@ -16,7 +16,8 @@ OPTIONAL_TABLES = [
     'observation_period', 
     'relationship', 
     'source_to_concept_map', 
-    'vocabulary'
+    'vocabulary',
+    'lab_site_mapping'
 ]
 
 # Thresholds for data quality (DQ) checks.
