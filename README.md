@@ -85,5 +85,6 @@ The following data quality checks are currently supported:
 - **Distinct Violation:** Ensures specified columns (or combinations) contain only unique values.
 - **Primary Key Violation:** Checks that primary key columns are both NOT NULL and unique.
 - **Foreign Key Violation:** Checks that values in a main table reference valid values in a related table.
+- **Check Fact Relationship:** Validates all fact_id values in fact_relationship exist in the corresponding fact tables.
 
 More checks will be added. 
