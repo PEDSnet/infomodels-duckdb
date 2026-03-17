@@ -276,7 +276,9 @@ def main():
         
         # Summarize DQ results
         CheckResult.summary(LOGGER)
-
+        # Exit with code 1 if there is any DQ failure        
+        if len(CheckResult.dq_fail) > 0:
+            exit(1)
 
 
 
