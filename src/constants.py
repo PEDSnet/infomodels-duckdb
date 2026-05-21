@@ -1,3 +1,19 @@
+# Virtual primary keys: multi-column combinations that must be unique across all rows
+# even though the data model assigns a synthetic single-column PK.
+# Violations indicate ETL fan-out bugs where the same clinical event is stored
+# more than once with different synthetic IDs.
+NATURAL_KEY_CHECKS = [
+    {
+        'table_name': 'measurement',
+        'column_names': (
+            'person_id',
+            'measurement_datetime',
+            'measurement_concept_id',
+            'value_as_number',
+        ),
+    },
+]
+
 # Optional CDM tables that are not required for submission
 # These tables will still be loaded if present in the submission files,
 # but are not included in any checks

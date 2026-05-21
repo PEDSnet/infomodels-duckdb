@@ -2,7 +2,7 @@ from src.config import CONFIG, LOGGER
 from src.dq_checks.check_result import CheckResult
 from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb, init_duckdb_logging_schema, load_parquet_to_duckdb
 from src.data_model import DataModel
-from src.constants import OPTIONAL_TABLES
+from src.constants import OPTIONAL_TABLES, NATURAL_KEY_CHECKS
 from src.dq_checks.check_file_completeness import check_missing_submission_file, check_extra_submission_file
 from src.dq_checks.check_header import check_duplicated_column_in_csv, check_extra_column_in_csv, check_missing_column_in_csv, check_extra_column_in_parquet, check_missing_column_in_parquet
 from src.dq_checks.check_fk import check_fk_violation
@@ -267,6 +267,21 @@ def main():
             )
             LOGGER.debug(f"Primary Key Distinct Check Finished for {table_name}({', '.join(column_names)}).")
             LOGGER.debug(f"Primary Key Check Finished for {table_name}.{column_names}.")
+
+        # Check virtual PK violations: column combos that must be unique even though
+        # the data model assigns a synthetic single-column PK
+        for vpk_def in NATURAL_KEY_CHECKS:
+            table_name = vpk_def['table_name']
+            vpk_columns = vpk_def['column_names']
+            if table_name in context.skip_check_tables:
+                LOGGER.debug(f"Skipping virtual PK check for {table_name}({', '.join(vpk_columns)}) as table is in the skip list.")
+                continue
+            check_distinct_violation(
+                con=con,
+                table_name=table_name,
+                column_names=vpk_columns,
+            )
+            LOGGER.debug(f"Virtual PK Distinct Check Finished for {table_name}({', '.join(vpk_columns)}).")
 
         # Check fact_relationship
         check_result_fact_relationship = check_fact_relationship(
