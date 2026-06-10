@@ -48,14 +48,21 @@ It provides utilities to validate data integrity rules, such as constraints and 
     ```
 2. **Activate virtual environment and install dependencies (optional, but recommended):**  
    This isolates your Python environment for the project. Alternatively, you may install the package and its dependencies system-wide if preferred.
+   You only have to install the packages once but must activate the virtual environment before every run.
 
     ```bash
     python -m venv .venv
     source .venv/bin/activate
     pip install -r requirements.txt
     ```
+    **Windows PowerShell**
+    ```bash
+    python3 -m venv .venv
+    .\venv\Scripts\Activate.ps1
+    python3 pip install -r requirements.txt
+    ```
 
-3. **Edit the configuration:**
+4. **Edit the configuration:**
 
     Copy the template configuration file and update it as needed:
 
@@ -66,11 +73,15 @@ It provides utilities to validate data integrity rules, such as constraints and 
     Then, edit `config.yml` to match your submission and site file format.
 
 
-4. **Run the main script:**
+5. **Run the main script:**
 
     ```bash
     python -m src.main
     ```
+    **Windows PowerShell**
+   ```bash
+   python3 -m src.main
+   ```
 
 ## Implemented Checks
 
