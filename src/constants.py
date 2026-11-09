@@ -78,4 +78,72 @@ DQ_THRESHOLDS = {
             "threshold": {'PASS': 0.0, 'WARN': 0.01,},
         },
     ],
+    "datetime_concordance": [
+        {
+            "table_name": "*",
+            "column_name": "*",
+            "threshold": {'PASS': 0.0, 'WARN': 0.01,},
+        },
+    ],
+}
+
+
+# Assess date/datetime concordance in raw data
+# Each entry: date : datetime pairs
+DATE_DATETIME_COLUMNS= {
+    'person' : {
+        'birth_date' : 'birth_datetime'
+    },
+
+    'death' : {
+        'death_date' : 'death_datetime'
+    },
+
+    'visit_occurrence' : {
+        'visit_start_date' : 'visit_start_datetime',
+        'visit_end_date' : 'visit_end_datetime'
+    },
+
+    'condition_occurrence' : {
+        'condition_start_date' : 'condition_start_datetime',
+        'condition_end_date' : 'condition_end_datetime'
+    },
+
+    'procedure_occurrence' :  {
+        'procedure_date' : 'procedure_datetime',
+        'procedure_end_date' : 'procedure_end_datetime'
+    },
+
+    'observation' : {
+        'observation_date' : 'observation_datetime'
+    },
+
+    'drug_exposure' : {
+        'drug_exposure_start_date' : 'drug_exposure_start_datetime',
+        'drug_exposure_end_date' : 'drug_exposure_end_datetime',
+        'drug_exposure_order_date' : 'drug_exposure_order_datetime'
+    },
+
+    'measurement' : {
+        'measurement_date' : 'measurement_datetime',
+        'measurement_order_date' : 'measurement_order_datetime',
+        'measurement_result_date' : 'measurement_result_datetime'
+    },
+
+    'immunization' : {
+        'imm_exp_date' : 'imm_exp_datetime',
+        'imm_recorded_date' : 'imm_recorded_datetime',
+        'immunization_date' : 'immunization_datetime'
+    },
+
+    'device_exposure' : {
+        'device_exposure_start_date' : 'device_exposure_start_datetime',
+        'device_exposure_end_date' : 'device_exposure_end_datetime'
+    },
+
+    'location_history' : {
+        'start_date' : 'start_datetime',
+        'end_date' : 'end_datetime'
+    }
+
 }

@@ -2,13 +2,14 @@ from src.config import CONFIG, LOGGER
 from src.dq_checks.check_result import CheckResult
 from src.load_duckdb import create_duckdb_tables, load_csv_to_duckdb, init_duckdb_logging_schema, load_parquet_to_duckdb
 from src.data_model import DataModel
-from src.constants import OPTIONAL_TABLES
+from src.constants import OPTIONAL_TABLES, DATE_DATETIME_COLUMNS
 from src.dq_checks.check_file_completeness import check_missing_submission_file, check_extra_submission_file
 from src.dq_checks.check_header import check_duplicated_column_in_csv, check_extra_column_in_csv, check_missing_column_in_csv, check_extra_column_in_parquet, check_missing_column_in_parquet
 from src.dq_checks.check_fk import check_fk_violation
 from src.dq_checks.check_not_null import check_not_null_violation
 from src.dq_checks.check_distinct import check_distinct_violation
 from src.dq_checks.check_fact_relationship import check_fact_relationship
+from src.dq_checks.check_datetime import check_datetime_concordance
 import duckdb
 import os
 import fnmatch
@@ -273,7 +274,24 @@ def main():
             con=con,
             skip_tables = context.skip_check_tables
         )
-        
+        LOGGER.debug(f"Check fact_relationship Finished.")
+
+
+        # Check date/datetime concordance
+        for table_name, column_map in DATE_DATETIME_COLUMNS.items():
+            for date_col, datetime_col in column_map.items():
+                check_result_datetime_concordance = check_datetime_concordance(
+                    con=con,
+                    table_name=table_name,
+                    date_column=date_col,
+                    datetime_column=datetime_col,
+                )
+                LOGGER.debug(f"Datetime Concordance Check Finished for {table_name}.{date_col} and {table_name}.{datetime_col}.")
+            
+        LOGGER.debug(f"All datetime Concordance Checks Finished.")
+
+    
+
         # Summarize DQ results
         CheckResult.summary(LOGGER)
         # Exit with code 1 if there is any DQ failure        

@@ -97,5 +97,6 @@ The following data quality checks are currently supported:
 - **Primary Key Violation:** Checks that primary key columns are both NOT NULL and unique.
 - **Foreign Key Violation:** Checks that values in a main table reference valid values in a related table.
 - **Check Fact Relationship:** Validates all fact_id values in fact_relationship exist in the corresponding fact tables.
+- **Check Datetime Concordance:** Verify that DATE and DATETIME columns are concordant. 
 
 More checks will be added. 
