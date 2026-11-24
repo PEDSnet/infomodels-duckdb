@@ -5,6 +5,8 @@ import os
 from src.constants import DQ_THRESHOLDS
 import fnmatch
 import duckdb
+import re
+import ast
 
 
 def get_csv_header(file_path: str, **kwargs) -> List[str]:
@@ -20,8 +22,16 @@ def get_csv_header(file_path: str, **kwargs) -> List[str]:
     Returns:
         list[str]: A list of strings, each representing a column name. 
     """
+    # get delim from duck_db_copy_option
+    pattern = r"""(?:^|,)\s*(?:DELIM(?:ITER)?|SEP(?:ARATOR)?)\s+('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")"""
+    match = re.search(pattern, CONFIG['duckdb']['copy_options'], re.IGNORECASE)
+    if match:
+        delim_matched = ast.literal_eval(match.group(1))
+        if 'delimiter' in kwargs and kwargs['delimiter'] != delim_matched:
+            LOGGER.warning(f"Delimiter is specified in both duckdb copy options and function argument. Using the delimiter from duckdb copy options: {match.group(1)}")
+        kwargs['delimiter'] = delim_matched
     with open(file_path) as csvfile:
-        reader = csv.reader(csvfile, kwargs)
+        reader = csv.reader(csvfile, **kwargs)
         header = next(reader, None)
         if header is None:
             raise ValueError(f"CSV file: {file_path} is empty.")
